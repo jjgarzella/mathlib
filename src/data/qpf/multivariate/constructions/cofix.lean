@@ -5,31 +5,33 @@ Author: Jeremy Avigad
 
 The initial algebra of a multivariate qpf is again a qpf.
 -/
+
+import control.functor.multivariate
 import data.qpf.multivariate.pfunctor.basic
 import data.qpf.multivariate.pfunctor.M
 import data.qpf.multivariate.constructions.basic
-import data.qpf.multivariate.functor
+import tactic.reassoc_axiom
 
 universe u
 
 namespace mvqpf
-open typevec
+open typevec mvpfunctor
 open mvfunctor (liftp liftr)
 
 variables {n : ℕ} {F : typevec.{u} (n+1) → Type u} [mvfunctor F] [q : mvqpf F]
 include q
 
 def corecF {α : typevec n} {β : Type*} (g : β → F (α.append1 β)) : β → q.P.M α :=
-q.P.M_corec (λ x, repr (g x))
+M.corec _ (λ x, repr (g x))
 
 theorem corecF_eq {α : typevec n} {β : Type*} (g : β → F (α.append1 β)) (x : β) :
-  q.P.M_dest (corecF g x) = append_fun id (corecF g) <$$> repr (g x) :=
-by rw [corecF, q.P.M_dest_corec]
+  M.dest q.P (corecF g x) = append_fun id (corecF g) <$$> repr (g x) :=
+by rw [corecF, M.dest_corec]
 
 def is_precongr {α : typevec n} (r : q.P.M α → q.P.M α → Prop) : Prop :=
   ∀ ⦃x y⦄, r x y →
-    abs (append_fun id (quot.mk r) <$$> q.P.M_dest x) =
-      abs (append_fun id (quot.mk r) <$$> q.P.M_dest y)
+    abs (append_fun id (quot.mk r) <$$> M.dest q.P x) =
+      abs (append_fun id (quot.mk r) <$$> M.dest q.P y)
 
 def Mcongr {α : typevec n} (x y : q.P.M α) : Prop :=
 ∃ r, is_precongr r ∧ r x y
@@ -49,7 +51,7 @@ quot.lift (λ x : q.P.M α, quot.mk Mcongr (g <$$> x))
         (by { intros a₁ a₂ ra₁a₂, apply quot.sound, exact ⟨a₁, a₂, ra₁a₂, rfl, rfl⟩ }),
       have hu : (quot.mk r' ∘ λ x : q.P.M α, g <$$> x) = u ∘ quot.mk r,
         { ext x, refl },
-      rw [b₁eq, b₂eq, q.P.M_dest_map, q.P.M_dest_map, ←q.P.comp_map, ←q.P.comp_map],
+      rw [b₁eq, b₂eq, M.dest_map, M.dest_map, ←q.P.comp_map, ←q.P.comp_map],
       rw [←append_fun_comp, id_comp, hu, hu, ←comp_id g, append_fun_comp],
       rw [q.P.comp_map, q.P.comp_map, abs_map, pr ra₁a₂, ←abs_map] },
     show r' (g <$$> aa₁) (g <$$> aa₂), from ⟨aa₁, aa₂, ra₁a₂, rfl, rfl⟩
@@ -63,7 +65,7 @@ def cofix.corec {α : typevec n} {β : Type u} (g : β → F (α.append1 β)) : 
 
 def cofix.dest {α : typevec n} : cofix F α → F (α.append1 (cofix F α)) :=
 quot.lift
-  (λ x, append_fun id (quot.mk Mcongr) <$$> (abs (q.P.M_dest x)))
+  (λ x, append_fun id (quot.mk Mcongr) <$$> (abs (M.dest q.P x)))
   begin
     rintros x y ⟨r, pr, rxy⟩, dsimp,
     have : ∀ x y, r x y → Mcongr x y,
@@ -143,8 +145,8 @@ begin
   have : is_precongr r',
   { intros a b r'ab,
       have  h₀ :
-          append_fun id (quot.mk r ∘ quot.mk Mcongr) <$$> abs (q.P.M_dest a) =
-          append_fun id (quot.mk r ∘ quot.mk Mcongr) <$$> abs (q.P.M_dest b) :=
+          append_fun id (quot.mk r ∘ quot.mk Mcongr) <$$> abs (M.dest q.P a) =
+          append_fun id (quot.mk r ∘ quot.mk Mcongr) <$$> abs (M.dest q.P b) :=
         by rw [append_fun_comp_id, comp_map, comp_map]; exact h _ _ r'ab,
     have h₁ : ∀ u v : q.P.M α, Mcongr u v → quot.mk r' u = quot.mk r' v,
     { intros u v cuv, apply quot.sound, dsimp [r'], rw quot.sound cuv, apply h' },
@@ -194,9 +196,8 @@ begin
   rw [append_fun_comp_split_fun, append_fun_comp_split_fun],
   rw [id_comp, id_comp],
   congr' 2, ext i j, cases i with _ i; dsimp,
+  { apply quot.sound, apply h' _ j },
   { change f₀ _ j = f₁ _ j, apply h' _ j },
-  apply quot.sound,
-  apply h' _ j
 end
 
 theorem cofix.bisim₂ {α : typevec n}
@@ -221,8 +222,8 @@ cofix.bisim R
       refine ⟨a, q.P.append_contents f' f₀, q.P.append_contents f' f₁,
         xeq.symm ▸ ux'eq, yeq.symm ▸ vx'eq, _⟩,
       intro i, cases i,
+      { apply h' },
       { intro j, apply eq.refl },
-      apply h',
     end)
   _ _ ⟨x, Qx, rfl, rfl⟩
 
@@ -262,7 +263,7 @@ by rw [← cofix.dest_mk x,h,cofix.dest_mk]
 section
 omit q
 theorem liftr_map {α β : typevec n} {F' : typevec n → Type u} [mvfunctor F']
-  [mvfunctor.is_lawful F']
+  [is_lawful_mvfunctor F']
   (R : β ⊗ β ⟹ repeat n Prop) (x : F' α) (f g : α ⟹ β)
   (h : α ⟹ subtype_ R)
   (hh : subtype_val _ ⊚ h = (f ⊗ g) ⊚ prod.diag) :
@@ -275,23 +276,33 @@ begin
   dsimp [liftr'], split; refl,
 end
 
-#check diag_sub
-
+-- set_option pp.implicit true
+-- set_option pp.notation false
+-- #exit
 open function
-theorem liftr_map_last [mvfunctor.is_lawful F] {α : typevec n} {ι ι'}
+
+theorem liftr_map_last [is_lawful_mvfunctor F] {α : typevec n} {ι ι'}
   (R : ι' → ι' → Prop) (x : F (α ::: ι)) (f g : ι → ι')
   (hh : ∀ x : ι, R (f x) (g x)) :
   liftr' (rel_last' _ R) ((id ::: f) <$$> x) ((id ::: g) <$$> x) :=
 let h : ι → { x : ι' × ι' // uncurry R x } := λ x, ⟨ (f x,g x), hh x ⟩ in
-have hh' : subtype_val (repeat_eq α) ⊚ diag_sub = id ⊚ prod.diag,
-  by { clear_except, ext i, induction i; [apply i_ih, refl], },
-have hh : subtype_val (rel_last' α R) ⊚ (diag_sub ::: h : _ ⟹ _) = (id ::: f ⊗ id ::: g) ⊚ prod.diag,
-  by { ext (i|i), { replace hh' := congr_fun (congr_fun hh' x_1_a) x_1, convert hh' using 1,
-                    rw [← append_prod_append_fun,prod_id], refl },
-       simp [(⊚),append_fun,split_fun,subtype_val,prod.diag,prod.arrow_mk,drop_fun,rel_last',subtype_val], },
-liftr_map _ x _ _ (diag_sub ::: h : _ ⟹ _) _
+let b : α ::: ι ⟹ _ := @diag_sub n α ::: h,
+    c : subtype_ α.repeat_eq ::: {x // uncurry R x} ⟹
+        (λ (i : fin2 (n)), {x // of_repeat (α.rel_last' R i.fs x)}) ::: subtype (uncurry R) :=
+      of_subtype _ ::: id
+in
+have hh : subtype_val _ ⊚ to_subtype _ ⊚ from_append1_drop_last ⊚ c ⊚ b =
+          (id ::: f ⊗ id ::: g) ⊚ prod.diag,
+  by { dsimp [c,b],
+       apply eq_of_drop_last_eq,
+       { dsimp, simp, erw [to_subtype_of_subtype_assoc,id_comp],
+         clear_except,
+         unfreezingI { ext i x : 2, induction i },
+         refl,  apply i_ih, },
+       simp [h], dsimp, ext1, refl },
+liftr_map _ _ _ _ (to_subtype _ ⊚ from_append1_drop_last ⊚ c ⊚ b) hh
 
-theorem liftr_map_last' [mvfunctor.is_lawful F] {α : typevec n} {ι}
+theorem liftr_map_last' [is_lawful_mvfunctor F] {α : typevec n} {ι}
   (R : ι → ι → Prop) (x : F (α ::: ι)) (f : ι → ι)
   (hh : ∀ x : ι, R (f x) x) :
   liftr' (rel_last' _ R) ((id ::: f) <$$> x) x :=

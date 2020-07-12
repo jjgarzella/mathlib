@@ -7,9 +7,10 @@ Multivariate polynomial functors.
 
 Note: eventually the W and M constructions as multivariate polynomial functors will go here.
 -/
-import data.qpf.multivariate.functor data.qpf.univariate.pfunctor
-  data.sigma
--- import for_mathlib
+import control.functor.multivariate
+import data.pfunctor.univariate
+import data.sigma
+
 universes u v
 
 /-
@@ -24,50 +25,50 @@ open mvfunctor (liftp liftr)
 
 variables {n m : ℕ} (P : mvpfunctor.{u} n)
 
-def apply (α : typevec.{u} n) : Type u := Σ a : P.A, P.B a ⟹ α
+def obj (α : typevec.{u} n) : Type u := Σ a : P.A, P.B a ⟹ α
 
-def map {α β : typevec n} (f : α ⟹ β) : P.apply α → P.apply β :=
+def map {α β : typevec n} (f : α ⟹ β) : P.obj α → P.obj β :=
 λ ⟨a, g⟩, ⟨a, typevec.comp f g⟩
 
-instance : mvfunctor P.apply :=
+instance : mvfunctor P.obj :=
 ⟨@mvpfunctor.map n P⟩
 
 theorem map_eq {α β : typevec n} (g : α ⟹ β) (a : P.A) (f : P.B a ⟹ α) :
-  @mvfunctor.map _ P.apply _ _ _ g ⟨a, f⟩ = ⟨a, g ⊚ f⟩ :=
+  @mvfunctor.map _ P.obj _ _ _ g ⟨a, f⟩ = ⟨a, g ⊚ f⟩ :=
 rfl
 
-theorem id_map {α : typevec n} : ∀ x : P.apply α, typevec.id <$$> x = x
+theorem id_map {α : typevec n} : ∀ x : P.obj α, typevec.id <$$> x = x
 | ⟨a, g⟩ := rfl
 
 theorem comp_map {α β γ : typevec n} (f : α ⟹ β) (g : β ⟹ γ) :
-  ∀ x : P.apply α, (g ⊚ f) <$$> x = g <$$> (f <$$> x)
+  ∀ x : P.obj α, (g ⊚ f) <$$> x = g <$$> (f <$$> x)
 | ⟨a, h⟩ := rfl
 
-def comp (P : mvpfunctor.{u} n) (Q : fin' n → mvpfunctor.{u} m) : mvpfunctor m :=
+def comp (P : mvpfunctor.{u} n) (Q : fin2 n → mvpfunctor.{u} m) : mvpfunctor m :=
 { A := Σ a₂ : P.1, Π i, P.2 a₂ i → (Q i).1,
   B := λ a, λ i, Σ j (b : P.2 a.1 j), (Q j).2 (a.snd j b) i }
 
-variables {P} {Q : fin' n → mvpfunctor.{u} m} {α β : typevec.{u} m}
+variables {P} {Q : fin2 n → mvpfunctor.{u} m} {α β : typevec.{u} m}
 
-def comp.mk (x : P.apply (λ i, (Q i).apply α)) : (comp P Q).apply α :=
+def comp.mk (x : P.obj (λ i, (Q i).obj α)) : (comp P Q).obj α :=
 ⟨ ⟨ x.1, λ i a, (x.2 _ a).1  ⟩, λ i a, (x.snd a.fst (a.snd).fst).snd i (a.snd).snd ⟩
 
-def comp.get (x : (comp P Q).apply α) : P.apply (λ i, (Q i).apply α) :=
-⟨ x.1.1, λ i a, ⟨x.fst.snd i a, λ (j : fin' m) (b : (Q i).B _ j), x.snd j ⟨i, ⟨a, b⟩⟩⟩ ⟩
+def comp.get (x : (comp P Q).obj α) : P.obj (λ i, (Q i).obj α) :=
+⟨ x.1.1, λ i a, ⟨x.fst.snd i a, λ (j : fin2 m) (b : (Q i).B _ j), x.snd j ⟨i, ⟨a, b⟩⟩⟩ ⟩
 
-lemma comp.get_map (f : α ⟹ β) (x : (comp P Q).apply α) :
-  comp.get (f <$$> x) = (λ i (x : (Q i).apply α), f <$$> x) <$$> comp.get x :=
+lemma comp.get_map (f : α ⟹ β) (x : (comp P Q).obj α) :
+  comp.get (f <$$> x) = (λ i (x : (Q i).obj α), f <$$> x) <$$> comp.get x :=
 by cases x; refl
 
 @[simp]
-lemma comp.get_mk (x : P.apply (λ i, (Q i).apply α)) : comp.get (comp.mk x) = x :=
+lemma comp.get_mk (x : P.obj (λ i, (Q i).obj α)) : comp.get (comp.mk x) = x :=
 begin
   cases x,
   simp! [comp.get,comp.mk],
 end
 
 @[simp]
-lemma comp.mk_get (x : (comp P Q).apply α) : comp.mk (comp.get x) = x :=
+lemma comp.mk_get (x : (comp P Q).obj α) : comp.mk (comp.get x) = x :=
 begin
   cases x,
   dsimp [comp.get,comp.mk],
@@ -80,7 +81,7 @@ end
 lifting predicates and relations
 -/
 
-theorem liftp_iff {α : typevec n} (p : Π ⦃i⦄ , α i → Prop) (x : P.apply α) :
+theorem liftp_iff {α : typevec n} (p : Π ⦃i⦄ , α i → Prop) (x : P.obj α) :
   liftp p x ↔ ∃ a f, x = ⟨a, f⟩ ∧ ∀ i j, p (f i j) :=
 begin
   split,
@@ -92,7 +93,7 @@ begin
   rw [xeq], reflexivity
 end
 
-theorem liftr_iff {α : typevec n} (r : Π ⦃i⦄, α i → α i → Prop) (x y : P.apply α) :
+theorem liftr_iff {α : typevec n} (r : Π ⦃i⦄, α i → α i → Prop) (x y : P.obj α) :
   liftr r x y ↔ ∃ a f₀ f₁, x = ⟨a, f₀⟩ ∧ y = ⟨a, f₁⟩ ∧ ∀ i j, r (f₀ i j) (f₁ i j) :=
 begin
   split,

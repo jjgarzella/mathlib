@@ -113,9 +113,9 @@ begin
     { rw [q.P.W_map_W_mk, q.P.W_map_W_mk], apply Wequiv.ind, apply ih },
   case mvqpf.Wequiv.abs : a₀ f'₀ f₀ a₁ f'₁ f₁ h
     { rw [q.P.W_map_W_mk, q.P.W_map_W_mk], apply Wequiv.abs,
-      show abs (q.P.apply_append1 a₀ (g ⊚ f'₀) (λ x, q.P.W_map g (f₀ x))) =
-           abs (q.P.apply_append1 a₁ (g ⊚ f'₁) (λ x, q.P.W_map g (f₁ x))),
-      rw [←q.P.map_apply_append1, ←q.P.map_apply_append1, abs_map, abs_map, h]},
+      show abs (q.P.obj_append1 a₀ (g ⊚ f'₀) (λ x, q.P.W_map g (f₀ x))) =
+           abs (q.P.obj_append1 a₁ (g ⊚ f'₁) (λ x, q.P.W_map g (f₁ x))),
+      rw [←q.P.map_obj_append1, ←q.P.map_obj_append1, abs_map, abs_map, h] },
   case mvqpf.Wequiv.trans : x y z e₁ e₂ ih₁ ih₂
     { apply mvqpf.Wequiv.trans, apply ih₁, apply ih₂ }
 end
@@ -240,8 +240,9 @@ begin
   rw mvqpf.liftp_iff,
   refine ⟨_, _, rfl, _⟩,
   intros i j,
-  cases i, { triv },
-  apply ih
+  cases i,
+  { apply ih },
+  { triv },
 end
 
 instance mvqpf_fix : mvqpf (fix F) :=

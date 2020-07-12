@@ -14,10 +14,10 @@ open typevec
 variables {n : ℕ} (P : mvpfunctor.{u} (n+1))
 
 /- defines a typevec of labels to assign to each node of P.last.W -/
-inductive W_path : P.last.W → fin' n → Type u
-| root (a : P.A) (f : P.last.B a → P.last.W) (i : fin' n) (c : P.drop.B a i) :
+inductive W_path : P.last.W → fin2 n → Type u
+| root (a : P.A) (f : P.last.B a → P.last.W) (i : fin2 n) (c : P.drop.B a i) :
     W_path ⟨a, f⟩ i
-| child (a : P.A) (f : P.last.B a → P.last.W) (i : fin' n) (j : P.last.B a) (c : W_path (f j) i) :
+| child (a : P.A) (f : P.last.B a → P.last.W) (i : fin2 n) (j : P.last.B a) (c : W_path (f j) i) :
     W_path ⟨a, f⟩ i
 
 def W_path_cases_on {α : typevec n} {a : P.A} {f : P.last.B a → P.last.W}
@@ -62,9 +62,9 @@ by ext i x; cases x; reflexivity
 def Wp : mvpfunctor n :=
 { A := P.last.W, B := P.W_path }
 
-def W (α : typevec n) : Type* := P.Wp.apply α
+def W (α : typevec n) : Type* := P.Wp.obj α
 
-instance mvfunctor_W : mvfunctor P.W := by delta W; apply_instance
+instance mvfunctor_W : mvfunctor P.W := by delta mvpfunctor.W; apply_instance
 
 /-
 First, describe operations on `W` as a polynomial functor.
@@ -175,16 +175,16 @@ end
 -- TODO: this technical theorem is used in one place in constructing the initial algebra.
 -- Can it be avoided?
 
-@[reducible] def apply_append1 {α : typevec n} {β : Type*}
+@[reducible] def obj_append1 {α : typevec n} {β : Type*}
     (a : P.A) (f' : P.drop.B a ⟹ α) (f : P.last.B a → β) :
-  P.apply (append1 α β) :=
+  P.obj (append1 α β) :=
 ⟨a, split_fun f' f⟩
 
-theorem map_apply_append1 {α γ : typevec n} (g : α ⟹ γ)
+theorem map_obj_append1 {α γ : typevec n} (g : α ⟹ γ)
   (a : P.A) (f' : P.drop.B a ⟹ α) (f : P.last.B a → P.W α) :
-append_fun g (P.W_map g) <$$> P.apply_append1 a f' f =
-  P.apply_append1 a (g ⊚ f') (λ x, P.W_map g (f x)) :=
-by rw [apply_append1, apply_append1, map_eq, append_fun, ← split_fun_comp]; refl
+append_fun g (P.W_map g) <$$> P.obj_append1 a f' f =
+  P.obj_append1 a (g ⊚ f') (λ x, P.W_map g (f x)) :=
+by rw [obj_append1, obj_append1, map_eq, append_fun, ← split_fun_comp]; refl
 
 /-
 Yet another view of the W type: as a fixed point for a multivariate polynomial functor.
@@ -192,10 +192,10 @@ These are needed to use the W-construction to construct a fixed point of a qpf, 
 the qpf axioms are expressed in terms of `map` on `P`.
 -/
 
-def W_mk' {α : typevec n} : P.apply (α.append1 (P.W α)) → P.W α
+def W_mk' {α : typevec n} : P.obj (α.append1 (P.W α)) → P.W α
 | ⟨a, f⟩ := P.W_mk a (drop_fun f) (last_fun f)
 
-def W_dest' {α : typevec.{u} n} : P.W α → P.apply (α.append1 (P.W α)) :=
+def W_dest' {α : typevec.{u} n} : P.W α → P.obj (α.append1 (P.W α)) :=
 P.W_rec (λ a f' f _, ⟨a, split_fun f' f⟩)
 
 theorem W_dest'_W_mk {α : typevec n}
@@ -203,7 +203,7 @@ theorem W_dest'_W_mk {α : typevec n}
   P.W_dest' (P.W_mk a f' f) = ⟨a, split_fun f' f⟩ :=
 by rw [W_dest', W_rec_eq]
 
-theorem W_dest'_W_mk' {α : typevec n} (x : P.apply (α.append1 (P.W α))) :
+theorem W_dest'_W_mk' {α : typevec n} (x : P.obj (α.append1 (P.W α))) :
   P.W_dest' (P.W_mk' x) = x :=
 by cases x with a f; rw [W_mk', W_dest'_W_mk, split_drop_fun_last_fun]
 

@@ -10,10 +10,10 @@ universe u
 
 class mvqpf {n : ℕ} (F : typevec.{u} n → Type*) [mvfunctor F] :=
 (P         : mvpfunctor.{u} n)
-(abs       : Π {α}, P.apply α → F α)
-(repr      : Π {α}, F α → P.apply α)
+(abs       : Π {α}, P.obj α → F α)
+(repr      : Π {α}, F α → P.obj α)
 (abs_repr  : ∀ {α} (x : F α), abs (repr x) = x)
-(abs_map   : ∀ {α β} (f : α ⟹ β) (p : P.apply α), abs (f <$$> p) = f <$$> abs p)
+(abs_map   : ∀ {α β} (f : α ⟹ β) (p : P.obj α), abs (f <$$> p) = f <$$> abs p)
 
 namespace mvqpf
 variables {n : ℕ} {F : typevec.{u} n → Type*} [mvfunctor F] [q : mvqpf F]
@@ -36,7 +36,7 @@ by { rw ←abs_repr x, cases repr x with a f, rw [←abs_map], reflexivity }
   (g ⊚ f) <$$> x = g <$$> f <$$> x :=
 by { rw ←abs_repr x, cases repr x with a f, rw [←abs_map, ←abs_map, ←abs_map], reflexivity }
 
-instance is_lawful_mvfunctor : mvfunctor.is_lawful F :=
+instance is_lawful_mvfunctor : is_lawful_mvfunctor F :=
 { id_map := @mvqpf.id_map n F _ _,
   comp_map := @comp_map n F _ _ }
 

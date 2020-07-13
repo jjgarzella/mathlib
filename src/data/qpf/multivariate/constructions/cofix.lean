@@ -21,6 +21,7 @@ open mvfunctor (liftp liftr)
 variables {n : ℕ} {F : typevec.{u} (n+1) → Type u} [mvfunctor F] [q : mvqpf F]
 include q
 
+/-- Corecursion on M-types -/
 def corecF {α : typevec n} {β : Type*} (g : β → F (α.append1 β)) : β → q.P.M α :=
 M.corec _ (λ x, repr (g x))
 
@@ -28,17 +29,33 @@ theorem corecF_eq {α : typevec n} {β : Type*} (g : β → F (α.append1 β)) (
   M.dest q.P (corecF g x) = append_fun id (corecF g) <$$> repr (g x) :=
 by rw [corecF, M.dest_corec]
 
+/-- Characterization of desirable equivalence relations on M-types -/
 def is_precongr {α : typevec n} (r : q.P.M α → q.P.M α → Prop) : Prop :=
   ∀ ⦃x y⦄, r x y →
     abs (append_fun id (quot.mk r) <$$> M.dest q.P x) =
       abs (append_fun id (quot.mk r) <$$> M.dest q.P y)
 
+/-- Equivalence relation on M-types representing a value of type `cofix F` -/
 def Mcongr {α : typevec n} (x y : q.P.M α) : Prop :=
 ∃ r, is_precongr r ∧ r x y
 
+/-- Greatest fixed point of functor F. The result is a functor with one fewer parameters
+than the input. For `F a b c` a ternary functor, fix F is a binary functor such that
+
+```lean
+cofix F a b = F a b (cofix F a b)
+```
+-/
 def cofix (F : typevec (n + 1) → Type u) [mvfunctor F] [q : mvqpf F] (α : typevec n) :=
 quot (@Mcongr _ F _ q α)
 
+instance {α : typevec n} [inhabited q.P.A] [Π (i : fin2 n), inhabited (α i)] :
+  inhabited (cofix F α) := ⟨ quot.mk _ (default _) ⟩
+
+/-- maps every element of the W type to a canonical representative -/
+def Mrepr {α : typevec n} : q.P.M α → q.P.M α := corecF (abs ∘ M.dest q.P)
+
+/-- `cofix F` is itself a functor -/
 def cofix.map {α β : typevec n} (g : α ⟹ β) : cofix F α → cofix F β :=
 quot.lift (λ x : q.P.M α, quot.mk Mcongr (g <$$> x))
   begin
@@ -60,9 +77,11 @@ quot.lift (λ x : q.P.M α, quot.mk Mcongr (g <$$> x))
 instance cofix.mvfunctor : mvfunctor (cofix F) :=
 { map := @cofix.map _ _ _ _}
 
+/-- Corecursor for `cofix F` -/
 def cofix.corec {α : typevec n} {β : Type u} (g : β → F (α.append1 β)) : β → cofix F α :=
 λ x, quot.mk  _ (corecF g x)
 
+/-- Destructor for `cofix F` -/
 def cofix.dest {α : typevec n} : cofix F α → F (α.append1 (cofix F α)) :=
 quot.lift
   (λ x, append_fun id (quot.mk Mcongr) <$$> (abs (M.dest q.P x)))
@@ -76,40 +95,24 @@ quot.lift
         ←append_fun_comp_id] }
   end
 
+/-- Corecursor for `cofix F` -/
 def cofix.corec'₁ {α : typevec n} {β : Type u}
   (g : Π {X}, (β → X) → F (α.append1 X)) (x : β) : cofix F α :=
 cofix.corec (λ x, g id) x
 
--- def cofix.corec' {α : typevec n} {β : Type u} (g : β → F (α.append1 (cofix F α ⊕ β))) (x : β) : cofix F α :=
--- cofix.corec
--- (λ x : cofix F α ⊕ β,
--- match x with
--- | (sum.inl val) := (id ::: sum.inl) <$$> cofix.dest val
--- | (sum.inr val) := g val
--- end)
--- (sum.inr x)
-
+/-- More flexible corecursor for `cofix F`. Allows the return of a fully formed
+value instead of making a recursive call -/
 def cofix.corec' {α : typevec n} {β : Type u} (g : β → F (α.append1 (cofix F α ⊕ β))) (x : β) : cofix F α :=
 let f : α ::: cofix F α ⟹ α ::: (cofix F α ⊕ β) := id ::: sum.inl in
 cofix.corec
 (sum.elim (mvfunctor.map f ∘ cofix.dest) g)
 (sum.inr x : cofix F α ⊕ β)
 
+/-- Corecursor for `cofix F`. The shape allows recursive calls to
+look like recursive calls. -/
 def cofix.corec₁ {α : typevec n} {β : Type u}
-  (g : Π {X}, (cofix F α → X) → (β → X) → β → F (α.append1 X)) (x : β) : cofix F α :=
+  (g : Π {X}, (cofix F α → X) → (β → X) → β → F (α ::: X)) (x : β) : cofix F α :=
 cofix.corec' (λ x, g sum.inl sum.inr x) x
-
--- def cofix.corec₂ {α : typevec n} {β : Type u} {γ : β → Type u}
---   (g : Π {X}, (cofix F α → X) → (Π b, γ b → X) → F (α.append1 X)) (x : β) (y : γ x) :
---   cofix F α :=
--- cofix.corec₁ (λ X ex rec, g ex $ λ a b, rec $ sigma.mk a b) (sigma.mk x y)
-
--- def cofix.corec₃ {α : typevec n} {β : Type u} {γ : β → Type u} {φ : Π a, γ a → Type u}
---   (g : Π {X}, (cofix F α → X) → (Π b (c : γ b), φ b c → X) → F (α.append1 X)) (x : β) (y : γ x) (z : φ x y) :
---   cofix F α :=
--- cofix.corec₁
---   (λ X ex rec, g ex $ λ a b c, rec (⟨a, b, c⟩ : Σ a b, φ a b))
---   (sigma.mk x $ sigma.mk y z)
 
 theorem cofix.dest_corec {α : typevec n} {β : Type u} (g : β → F (α.append1 β)) (x : β) :
   cofix.dest (cofix.corec g x) = append_fun id (cofix.corec g) <$$> g x :=
@@ -118,15 +121,7 @@ begin
   rw [corecF_eq, abs_map, abs_repr, ←comp_map, ←append_fun_comp], reflexivity
 end
 
--- theorem cofix.dest_corec' {α : typevec n} {β : Type u}
---   (g : Π {X}, (β → X) → F (α.append1 X)) (x : β)
---   (h : ∀ X (f : β → X), g f = (id ::: f) <$$> g id ) :
---   cofix.dest (cofix.corec'₁ @g x) = g (cofix.corec'₁ @g) :=
--- begin
---   rw [cofix.corec'₁,cofix.dest_corec,← h], refl
--- end
-
--- #exit
+/-- constructor for `cofix F` -/
 def cofix.mk {α : typevec n} : F (α.append1 $ cofix F α) → cofix F α :=
 cofix.corec (λ x, append_fun id (λ i : cofix F α, cofix.dest.{u} i) <$$> x)
 
@@ -250,16 +245,6 @@ by rw [← cofix.mk_dest x,h,cofix.mk_dest]
 lemma cofix.ext_mk {α : typevec n} (x y : F (α ::: cofix F α)) (h : cofix.mk x = cofix.mk  y) : x = y :=
 by rw [← cofix.dest_mk x,h,cofix.dest_mk]
 
--- set_option pp.all true
-
--- theorem cofix.dest_corec'' {α : typevec n} {β : Type u}
---   (g : β → F (α.append1 (cofix F α ⊕ β))) (x : β) :
---   cofix.dest (cofix.corec' g x) = append_fun id (sum.elim id (cofix.corec' g)) <$$> g x :=
--- begin
---   delta cofix.corec', rw [cofix.dest_corec], dsimp,
---   delta id_rhs, congr, dsimp, rw [sum.elim_inr],
--- end
-
 section
 omit q
 theorem liftr_map {α β : typevec n} {F' : typevec n → Type u} [mvfunctor F']
@@ -276,9 +261,6 @@ begin
   dsimp [liftr'], split; refl,
 end
 
--- set_option pp.implicit true
--- set_option pp.notation false
--- #exit
 open function
 
 theorem liftr_map_last [is_lawful_mvfunctor F] {α : typevec n} {ι ι'}
@@ -319,6 +301,7 @@ setup_tactic_parser
 open tactic
 omit q
 
+/-- tactic for proof by bisimulation -/
 meta def bisim₂ (e : parse texpr) (ids : parse with_ident_list) : tactic unit :=
 do e ← to_expr e,
    (expr.pi n bi d b) ← retrieve $ do {
@@ -378,63 +361,6 @@ theorem cofix.dest_corec₁ {α : typevec n} {β : Type u}
          g (k ∘ f) (k ∘ f') x = (id ::: k) <$$> g f f' x) :
   cofix.dest (cofix.corec₁ @g x) = g id (cofix.corec₁ @g) x :=
 by rw [cofix.corec₁,cofix.dest_corec',← h]; refl
-
--- theorem cofix.dest_corec₂ {α : typevec n} {β : Type u} {γ : β → Type u}
---   (g : Π {X}, (cofix F α → X) → (Π b, γ b → X) → F (α.append1 X))
---   (x : β) (y : γ x)
---   (h : ∀ X (k : cofix F α → X) (f : Π b, γ b → X),
---          g k f =
---             (id ::: sum.elim k (@sigma.rec β γ (λ _, X) f)) <$$> g sum.inl (λ (a : β) (b : γ a), sum.inr (sigma.mk a b)) ) :
---   cofix.dest (cofix.corec₂ @g x y) = g id (cofix.corec₂ @g) :=
--- begin
---   rw [cofix.corec₂,cofix.dest_corec₁], refl,
---   intros, rw h, congr, ext ⟨a,b⟩, refl,
--- end
-
--- theorem cofix.dest_corec₃ {α : typevec n} {β : Type u} {γ : β → Type u}
---   {φ : Π a, γ a → Type u}
---   (g : Π {X}, (cofix F α → X) → (Π b (c : γ b), φ b c → X) → F (α.append1 X))
---   (x : β) (y : γ x) (z : φ x y)
---   (h : ∀ X (k : cofix F α → X) (f : Π b (c : γ b), φ b c → X),
---          g k f =
---             (id ::: sum.elim k (@sigma.rec β (λ x : β, sigma (φ x)) (λ x,X) (λ x, @sigma.rec (γ x) (φ x) (λ _, X) (f x)))) <$$>
---            g sum.inl (λ (a : β) (b : γ a) (c : φ a b), sum.inr (sigma.mk a $ @sigma.mk _ (φ a) b c)) ) :
---   cofix.dest (cofix.corec₃ @g x y z) = g id (cofix.corec₃ @g) :=
--- begin
---   rw [cofix.corec₃,cofix.dest_corec₁], refl,
---   intros, rw h, congr, ext ⟨a,b,c⟩, refl,
--- end
-
--- #exit
--- theorem cofix.dest_corec'' {α : typevec n} {β : Type u}
---   (g : β → F (α.append1 β)) (x : β) :
---   cofix.dest (cofix.corec g x) = append_fun id (cofix.corec g) <$$> g x :=
-
--- theorem cofix.dest_corec'' {α : typevec n} {β : Type u}
---   (g : β → F (α.append1 (cofix F α ⊕ β))) (x : β) :
---   cofix.dest (cofix.corec₁ g x) = append_fun id (sum.elim id (cofix.corec' g)) <$$> g x :=
--- begin
---   delta cofix.corec', rw [cofix.dest_corec], dsimp,
---   delta id_rhs,
-
--- done,
--- congr' 1,
---   ext (a|a),
---   { dsimp [sum.elim], delta id_rhs,
---     -- let f : F (α ::: _) ⊕ β → _ :=
---     -- (sum.elim (λ (val : cofix F α), (id ::: sum.inl) <$$> cofix.dest val) (λ (val : β), g val)),
---     generalize hf : sum.rec _ _ = f,
---     let R : cofix F α → cofix F α → Prop := λ x y, x = cofix.corec f (sum.inl y),
---     refine cofix.bisim R _ _ _ rfl,
---     introv h,
---     dsimp [R] at h,
---     rw [h,← liftr_last_rel_iff,liftr_def],
---     let x' := append_fun id _ <$$> cofix.dest x_1,
---     -- done,
---     apply cofix.ext,
---     rw [cofix.dest_corec], dsimp,
---     rw [mvfunctor.map_map,← append_fun_comp_id], }
--- end
 
 noncomputable instance mvqpf_cofix : mvqpf (cofix F) :=
 { P         := q.P.Mp,

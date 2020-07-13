@@ -2,12 +2,16 @@
 Copyright (c) 2018 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Jeremy Avigad
-
-The initial algebra of a multivariate qpf is again a qpf.
 -/
 import data.qpf.multivariate.pfunctor.W
 import data.qpf.multivariate.constructions.basic
 universes u v
+
+/-!
+
+The initial algebra of a multivariate qpf is again a qpf.
+
+-/
 
 namespace mvqpf
 open typevec
@@ -35,6 +39,8 @@ begin
     typevec.id_comp]
 end
 
+/-- Equivalence relation on W-type that represent the same `fix F`
+value -/
 inductive Wequiv {α : typevec n} : q.P.W α → q.P.W α → Prop
 | ind (a : q.P.A) (f' : q.P.drop.B a ⟹ α) (f₀ f₁ : q.P.last.B a → q.P.W α) :
     (∀ x, Wequiv (f₀ x) (f₁ x)) → Wequiv (q.P.W_mk a f' f₀) (q.P.W_mk a f' f₁)
@@ -120,18 +126,27 @@ begin
     { apply mvqpf.Wequiv.trans, apply ih₁, apply ih₂ }
 end
 
-/-
+/--
 Define the fixed point as the quotient of trees under the equivalence relation.
 -/
-
 def W_setoid (α : typevec n) : setoid (q.P.W α) :=
 ⟨Wequiv, @Wequiv.refl _ _ _ _ _, @Wequiv.symm _ _ _ _ _, @Wequiv.trans _ _ _ _ _⟩
 
 local attribute [instance] W_setoid
 
+/-- Least fixed point of functor F. The result is a functor with one fewer parameters
+than the input. For `F a b c` a ternary functor, fix F is a binary functor such that
+
+```lean
+fix F a b = F a b (fix F a b)
+```
+-/
 def fix {n : ℕ} (F : typevec (n+1) → Type*) [mvfunctor F] [q : mvqpf F] (α : typevec n) :=
 quotient (W_setoid α : setoid (q.P.W α))
 
+attribute [nolint has_inhabited_instance] fix
+
+/-- `fix F` is a functor -/
 def fix.map {α β : typevec n} (g : α ⟹ β) : fix F α → fix F β :=
 quotient.lift (λ x : q.P.W α, ⟦q.P.W_map g x⟧)
   (λ a b h, quot.sound (Wequiv_map _ _ _ h))
@@ -141,16 +156,19 @@ instance fix.mvfunctor : mvfunctor (fix F) :=
 
 variable {α : typevec.{u} n}
 
--- TODO: should this be quotient.lift?
-def fix.rec {β : Type u} (g : F (append1 α β) → β) : fix F α → β :=
+/-- Recursor for `fix F` -/
+def fix.rec {β : Type u} (g : F (α ::: β) → β) : fix F α → β :=
 quot.lift (recF g) (recF_eq_of_Wequiv α g)
 
+/-- Access W-type underlying `fix F`  -/
 def fix_to_W : fix F α → q.P.W α :=
 quotient.lift Wrepr (recF_eq_of_Wequiv α (λ x, q.P.W_mk' (repr x)))
 
+/-- Constructor for `fix F` -/
 def fix.mk (x : F (append1 α (fix F α))) : fix F α :=
   quot.mk _ (q.P.W_mk' (append_fun id fix_to_W <$$> repr x))
 
+/-- Destructor for `fix F` -/
 def fix.dest : fix F α → F (append1 α (fix F α)) :=
 fix.rec (mvfunctor.map (append_fun id fix.mk))
 
@@ -257,6 +275,7 @@ instance mvqpf_fix : mvqpf (fix F) :=
       apply Wequiv.refl
     end }
 
+/-- Dependent recursor for `fix F` -/
 def fix.drec {β : fix F α → Type u} (g : Π x : F (α ::: sigma β), β (fix.mk $ (id ::: sigma.fst) <$$> x)) (x : fix F α) : β x :=
 let y := @fix.rec _ F _ _ α (sigma β) (λ i, ⟨_,g i⟩) x in
 have x = y.1,

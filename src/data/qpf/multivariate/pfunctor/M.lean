@@ -14,6 +14,11 @@ open typevec
 
 variables {n : ℕ} (P : mvpfunctor.{u} (n+1))
 
+/-- A path through an M-type uniquely identifies a node where a value
+can be located. For an `n`-ary polynomial functor `P` and a value of
+the M-type `x : P.last.M`, `M.path P x` is a vector of types which,
+for each location of the vector, gives us the type of the paths
+that will locate corresponding values. -/
 inductive M.path : P.last.M → fin2 n → Type u
 | root (x : P.last.M) (a : P.A) (f : P.last.B a → P.last.M) (h : pfunctor.M.dest x = ⟨a, f⟩)
        (i : fin2 n) (c : P.drop.B a i) :
@@ -22,25 +27,44 @@ inductive M.path : P.last.M → fin2 n → Type u
       (j : P.last.B a) (i : fin2 n) (c : M.path (f j) i) :
     M.path x i
 
+instance M.path.inhabited (x : P.last.M) {i} [inhabited (P.drop.B x.head i)] :
+  inhabited (M.path P x i) :=
+⟨ M.path.root _ (pfunctor.M.head x) (pfunctor.M.children x)
+  (pfunctor.M.cases_on' x $
+    by intros; simp [pfunctor.M.dest_mk]; ext; rw pfunctor.M.children_mk; refl) _
+    (default _) ⟩
+
+/-- Polynomial functor of the M-type of `P` -/
 def Mp : mvpfunctor n :=
 { A := P.last.M, B := M.path P }
 
+/-- `n`-ary M-type for `P` -/
 def M (α : typevec n) : Type* := P.Mp.obj α
 
 instance mvfunctor_M : mvfunctor P.M := by delta M; apply_instance
+instance inhabited_M {α : typevec _}
+  [I : inhabited P.A]
+  [Π (i : fin2 n), inhabited (α i)] :
+  inhabited (P.M α) :=
+@obj.inhabited _ (Mp P) _ (@pfunctor.M.inhabited P.last I) _
 
+/-- construct through corecursion the shape of an M-type
+without its contents -/
 def M.corec_shape {β : Type u}
     (g₀ : β → P.A)
     (g₂ : Π b : β, P.last.B (g₀ b) → β) :
   β → P.last.M :=
 pfunctor.M.corec (λ b, ⟨g₀ b, g₂ b⟩)
 
+/-- Proof of type equality as an arrow -/
 def cast_dropB {a a' : P.A} (h : a = a') : P.drop.B a ⟹ P.drop.B a' :=
 λ i b, eq.rec_on h b
 
+/-- Proof of type equality as a function -/
 def cast_lastB {a a' : P.A} (h : a = a') : P.last.B a → P.last.B a' :=
 λ b, eq.rec_on h b
 
+/-- Using corecursion, construct the contents of an M-type -/
 def M.corec_contents {α : typevec.{u} n} {β : Type u}
     (g₀ : β → P.A)
     (g₁ : Π b : β, P.drop.B (g₀ b) ⟹ α)
@@ -57,6 +81,7 @@ def M.corec_contents {α : typevec.{u} n} {β : Type u}
     by { rw [h, M.corec_shape, pfunctor.M.dest_corec] at h', cases h', refl },
   M.corec_contents (f j) (g₂ b (P.cast_lastB h₀ j)) h₁ i c
 
+/-- Corecursor for M-type of `P` -/
 def M.corec' {α : typevec n} {β : Type u}
     (g₀ : β → P.A)
     (g₁ : Π b : β, P.drop.B (g₀ b) ⟹ α)
@@ -64,6 +89,7 @@ def M.corec' {α : typevec n} {β : Type u}
   β → P.M α :=
 λ b, ⟨M.corec_shape P g₀ g₂ b, M.corec_contents P g₀ g₁ g₂ _ _ rfl⟩
 
+/-- Corecursor for M-type of `P` -/
 def M.corec {α : typevec n} {β : Type u} (g : β → P.obj (α.append1 β)) :
   β → P.M α :=
 M.corec' P
@@ -71,27 +97,32 @@ M.corec' P
   (λ b, drop_fun (g b).snd)
   (λ b, last_fun (g b).snd)
 
+/-- Implementation of destructor for M-type of `P` -/
 def M.path_dest_left {α : typevec n} {x : P.last.M}
     {a : P.A} {f : P.last.B a → P.last.M} (h : pfunctor.M.dest x = ⟨a, f⟩)
     (f' : M.path P x ⟹ α) :
   P.drop.B a ⟹ α :=
 λ i c, f' i (M.path.root x a f h i c)
 
+/-- Implementation of destructor for M-type of `P` -/
 def M.path_dest_right {α : typevec n} {x : P.last.M}
     {a : P.A} {f : P.last.B a → P.last.M} (h : pfunctor.M.dest x = ⟨a, f⟩)
     (f' : M.path P x ⟹ α) :
   Π j : P.last.B a, M.path P (f j) ⟹ α :=
 λ j i c, f' i (M.path.child x a f h j i c)
 
+/-- Destructor for M-type of `P` -/
 def M.dest' {α : typevec n} {x : P.last.M}
     {a : P.A} {f : P.last.B a → P.last.M} (h : pfunctor.M.dest x = ⟨a, f⟩)
     (f' : M.path P x ⟹ α) :
   P.obj (α.append1 (P.M α)) :=
 ⟨a, split_fun (M.path_dest_left P h f') (λ x, ⟨f x, M.path_dest_right P h f' x⟩)⟩
 
-def M.dest {α : typevec n} (x : P.M α) : P.obj (α.append1 (P.M α)) :=
+/-- Destructor for M-types -/
+def M.dest {α : typevec n} (x : P.M α) : P.obj (α ::: P.M α) :=
 M.dest' P (sigma.eta $ pfunctor.M.dest x.fst).symm x.snd
 
+/-- Constructor for M-types -/
 def M.mk  {α : typevec n} : P.obj (α.append1 (P.M α)) → P.M α :=
 M.corec _ (λ i, append_fun id (M.dest P) <$$> i)
 

@@ -2,12 +2,34 @@
 Copyright (c) 2018 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Jeremy Avigad
-
-Multivariate quotients of polynomial functors.
 -/
 import data.qpf.multivariate.pfunctor.W
 universe u
 
+/-!
+# Multivariate quotients of polynomial functors.
+
+Basic definition of multivariant QPF
+
+## Related modules
+
+ * constructions
+   * fix
+   * cofix
+   * quot
+   * comp
+
+each proves that some operations on functors preserves the QPF structure
+
+##reference
+
+ * [Jeremy Avigad, Mario M. Carneiro and Simon Hudon, *Data Types as Quotients of Polynomial Functors*][avigad-carneiro-hudon2019]
+
+-/
+
+/--
+Multivariate quotients of polynomial functors.
+-/
 class mvqpf {n : ℕ} (F : typevec.{u} n → Type*) [mvfunctor F] :=
 (P         : mvpfunctor.{u} n)
 (abs       : Π {α}, P.obj α → F α)
@@ -20,11 +42,6 @@ variables {n : ℕ} {F : typevec.{u} n → Type*} [mvfunctor F] [q : mvqpf F]
 include q
 open mvfunctor (liftp liftr)
 
--- def repr {α : typevec n} (x : F α) := repr' x
-
--- theorem abs_repr {α : typevec n} (x : F α) : abs (repr x) = x :=
--- abs_repr' x
-
 /-
 Show that every mvqpf is a lawful mvfunctor.
 -/
@@ -36,6 +53,7 @@ by { rw ←abs_repr x, cases repr x with a f, rw [←abs_map], reflexivity }
   (g ⊚ f) <$$> x = g <$$> f <$$> x :=
 by { rw ←abs_repr x, cases repr x with a f, rw [←abs_map, ←abs_map, ←abs_map], reflexivity }
 
+@[priority 100]
 instance is_lawful_mvfunctor : is_lawful_mvfunctor F :=
 { id_map := @mvqpf.id_map n F _ _,
   comp_map := @comp_map n F _ _ }

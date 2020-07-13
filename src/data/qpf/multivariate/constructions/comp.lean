@@ -6,9 +6,11 @@ universes u
 
 namespace mvqpf
 variables {n m : ℕ}
-  (F : typevec.{u} n → Type*) [mvfunctor F] [q : mvqpf F]
-  (G : fin2 n → typevec.{u} m → Type u) [∀ i, mvfunctor $ G i] [q' : ∀ i, mvqpf $ G i]
+  (F : typevec.{u} n → Type*) [fF : mvfunctor F] [q : mvqpf F]
+  (G : fin2 n → typevec.{u} m → Type u) [fG : ∀ i, mvfunctor $ G i] [q' : ∀ i, mvqpf $ G i]
 
+/-- Composition of an `n`-ary functor with `n` `m`-ary
+functors gives us one `m`-ary functor -/
 def comp (v : typevec.{u} m) : Type* :=
 F $ λ i : fin2 n, G i v
 
@@ -16,17 +18,27 @@ namespace comp
 open mvfunctor mvpfunctor
 variables {F G} {α β : typevec.{u} m} (f : α ⟹ β)
 
+instance [I : inhabited (F $ λ i : fin2 n, G i α)] : inhabited (comp F G α) := I
+
+/-- Constructor for functor composition -/
 protected def mk (x : F $ λ i, G i α) : (comp F G) α := x
 
+/-- Destructor for functor composition -/
 protected def get (x : (comp F G) α) : F $ λ i, G i α := x
 
 @[simp] protected lemma mk_get (x : (comp F G) α) : comp.mk (comp.get x) = x := rfl
 
 @[simp] protected lemma get_mk (x : F $ λ i, G i α) : comp.get (comp.mk x) = x := rfl
 
+include fG
+
+/-- map operation defined on a vector of functors -/
 protected def map' : (λ (i : fin2 n), G i α) ⟹ λ (i : fin2 n), G i β :=
 λ i, map f
 
+include fF
+
+/-- The composition of functors is itself functorial -/
 protected def map : (comp F G) α → (comp F G) β :=
 (map (λ i, map f) : F (λ i, G i α) → F (λ i, G i β))
 

@@ -13,10 +13,9 @@ import data.sigma
 
 universes u v
 
-/-
+/--
 multivariate polynomial functors
 -/
-
 structure mvpfunctor (n : ℕ) :=
 (A : Type.{u}) (B : A → typevec.{u} n)
 
@@ -25,10 +24,19 @@ open mvfunctor (liftp liftr)
 
 variables {n m : ℕ} (P : mvpfunctor.{u} n)
 
+/-- Applying `P` to an object of `Type` -/
 def obj (α : typevec.{u} n) : Type u := Σ a : P.A, P.B a ⟹ α
 
+/-- Applying `P` to a morphism of `Type` -/
 def map {α β : typevec n} (f : α ⟹ β) : P.obj α → P.obj β :=
 λ ⟨a, g⟩, ⟨a, typevec.comp f g⟩
+
+instance : inhabited (mvpfunctor n) :=
+⟨ ⟨default _, λ _, default _⟩ ⟩
+
+instance obj.inhabited {α : typevec n} [inhabited P.A] [Π i, inhabited (α i)] :
+  inhabited (P.obj α) :=
+⟨ ⟨default _, λ _ _, default _⟩ ⟩
 
 instance : mvfunctor P.obj :=
 ⟨@mvpfunctor.map n P⟩
@@ -44,15 +52,18 @@ theorem comp_map {α β γ : typevec n} (f : α ⟹ β) (g : β ⟹ γ) :
   ∀ x : P.obj α, (g ⊚ f) <$$> x = g <$$> (f <$$> x)
 | ⟨a, h⟩ := rfl
 
+/-- Functor composition on polynomial functors -/
 def comp (P : mvpfunctor.{u} n) (Q : fin2 n → mvpfunctor.{u} m) : mvpfunctor m :=
 { A := Σ a₂ : P.1, Π i, P.2 a₂ i → (Q i).1,
   B := λ a, λ i, Σ j (b : P.2 a.1 j), (Q j).2 (a.snd j b) i }
 
 variables {P} {Q : fin2 n → mvpfunctor.{u} m} {α β : typevec.{u} m}
 
+/-- Constructor for functor composition -/
 def comp.mk (x : P.obj (λ i, (Q i).obj α)) : (comp P Q).obj α :=
 ⟨ ⟨ x.1, λ i a, (x.2 _ a).1  ⟩, λ i a, (x.snd a.fst (a.snd).fst).snd i (a.snd).snd ⟩
 
+/-- Destructor for functor composition -/
 def comp.get (x : (comp P Q).obj α) : P.obj (λ i, (Q i).obj α) :=
 ⟨ x.1.1, λ i a, ⟨x.fst.snd i a, λ (j : fin2 m) (b : (Q i).B _ j), x.snd j ⟨i, ⟨a, b⟩⟩⟩ ⟩
 
@@ -119,15 +130,20 @@ namespace mvpfunctor
 open typevec
 variables {n : ℕ} (P : mvpfunctor.{u} (n+1))
 
+/-- Split polynomial functor, get a n-ary functor
+from a `n+1`-ary functor -/
 def drop : mvpfunctor n :=
 { A := P.A, B := λ a, (P.B a).drop }
 
+/-- Split polynomial functor, get a univariate functor
+from a `n+1`-ary functor -/
 def last : pfunctor :=
 { A := P.A, B := λ a, (P.B a).last }
 
+/-- append arrows of a polynomial functor application -/
 @[reducible] def append_contents {α : typevec n} {β : Type*}
     {a : P.A} (f' : P.drop.B a ⟹ α) (f : P.last.B a → β) :
-  P.B a ⟹ α.append1 β :=
+  P.B a ⟹ α ::: β :=
 split_fun f' f
 
 end mvpfunctor

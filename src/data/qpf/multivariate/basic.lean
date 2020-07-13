@@ -89,4 +89,90 @@ begin
   rw [yeq, ←abs_map], refl
 end
 
+open set
+open mvfunctor
+
+theorem mem_supp {α : typevec n} (x : F α) (i) (u : α i) :
+  u ∈ supp x i ↔ ∀ a f, abs ⟨a, f⟩ = x → u ∈ f i '' univ :=
+begin
+  rw [supp], dsimp, split,
+  { intros h a f haf,
+    have : liftp (λ i u, u ∈ f i '' univ) x,
+    { rw liftp_iff, refine ⟨a, f, haf.symm, _⟩,
+      intros i u, exact mem_image_of_mem _ (mem_univ _) },
+    exact h this },
+  intros h p, rw liftp_iff,
+  rintros ⟨a, f, xeq, h'⟩,
+  rcases h a f xeq.symm with ⟨i, _, hi⟩,
+  rw ←hi, apply h'
+end
+
+theorem supp_eq {α : typevec n} {i} (x : F α) : supp x i = { u | ∀ a f, abs ⟨a, f⟩ = x → u ∈ f i '' univ } :=
+by ext; apply mem_supp
+
+theorem has_good_supp_iff {α : typevec n} (x : F α) :
+  (∀ p, liftp p x ↔ ∀ i (u ∈ supp x i), p i u) ↔
+    ∃ a f, abs ⟨a, f⟩ = x ∧ ∀ i a' f', abs ⟨a', f'⟩ = x → f i '' univ ⊆ f' i '' univ :=
+begin
+  split,
+  { intros h,
+    have : liftp (supp x) x, by rw h, intro u, exact id,
+    rw liftp_iff at this, rcases this with ⟨a, f, xeq, h'⟩,
+    refine ⟨a, f, xeq.symm, _⟩,
+    intros a' f' h'',
+    rintros u ⟨j, _, hfi⟩,
+    have hh : u ∈ supp x i, by rw ←hfi; apply h',
+    refine (mem_supp x _ u).mp hh _ _ h'', },
+  rintros ⟨a, f, xeq, h⟩ p, rw liftp_iff, split,
+  { rintros ⟨a', f', xeq', h'⟩ u usuppx,
+    rcases (mem_supp x _ u).mp @usuppx a' f' xeq'.symm with ⟨i, _, f'ieq⟩,
+    rw ←f'ieq, apply h' },
+  intro h',
+  refine ⟨a, f, xeq.symm, _⟩, intros j y,
+  apply h', rw mem_supp,
+  intros a' f' xeq',
+  apply h a' f' xeq',
+  apply mem_image_of_mem _ (mem_univ _)
+end
+
+variable (q)
+
+/-- A qpf is said to be uniform if every polynomial functor
+representing a single value all have the same range. -/
+def is_uniform : Prop := ∀ ⦃α : typevec n⦄ (a a' : q.P.A)
+    (f : q.P.B a ⟹ α) (f' : q.P.B a' ⟹ α),
+  abs ⟨a, f⟩ = abs ⟨a', f'⟩ → ∀ i, f i '' univ = f' i '' univ
+
+variable [q]
+
+theorem supp_eq_of_is_uniform (h : q.is_uniform) {α : typevec n} (a : q.P.A) (f : q.P.B a ⟹ α) :
+  ∀ i, supp (abs ⟨a, f⟩) i = f i '' univ :=
+begin
+  intro, ext u, rw [mem_supp], split,
+  { intro h', apply h' _ _ rfl },
+  intros h' a' f' e,
+  rw [←h _ _ _ _ e.symm], apply h'
+end
+
+theorem liftp_iff_of_is_uniform (h : q.is_uniform) {α : Type u} (x : F α) (p : α → Prop) :
+  liftp p x ↔ ∀ u ∈ supp x, p u :=
+begin
+  rw [liftp_iff, ←abs_repr x],
+  cases repr x with a f,  split,
+  { rintros ⟨a', f', abseq, hf⟩ u,
+    rw [supp_eq_of_is_uniform h, h _ _ _ _ abseq],
+    rintros ⟨i, _, hi⟩, rw ←hi, apply hf },
+  intro h',
+  refine ⟨a, f, rfl, λ i, h' _ _⟩,
+  rw supp_eq_of_is_uniform h,
+  exact ⟨i, mem_univ i, rfl⟩
+end
+
+theorem supp_map (h : q.is_uniform) {α β : Type u} (g : α → β) (x : F α) :
+  supp (g <$> x) = g '' supp x :=
+begin
+  rw ←abs_repr x, cases repr x with a f, rw [←abs_map, pfunctor.map_eq],
+  rw [supp_eq_of_is_uniform h, supp_eq_of_is_uniform h, image_comp]
+end
+
 end mvqpf

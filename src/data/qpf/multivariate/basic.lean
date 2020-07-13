@@ -116,22 +116,22 @@ theorem has_good_supp_iff {α : typevec n} (x : F α) :
 begin
   split,
   { intros h,
-    have : liftp (supp x) x, by rw h, intro u, exact id,
+    have : liftp (supp x) x, by { rw h, introv, exact id, },
     rw liftp_iff at this, rcases this with ⟨a, f, xeq, h'⟩,
     refine ⟨a, f, xeq.symm, _⟩,
     intros a' f' h'',
-    rintros u ⟨j, _, hfi⟩,
-    have hh : u ∈ supp x i, by rw ←hfi; apply h',
-    refine (mem_supp x _ u).mp hh _ _ h'', },
+    rintros hu u ⟨j, h₂, hfi⟩,
+    have hh : u ∈ supp x a', by rw ←hfi; apply h',
+    refine (mem_supp x _ u).mp hh _ _ hu, },
   rintros ⟨a, f, xeq, h⟩ p, rw liftp_iff, split,
-  { rintros ⟨a', f', xeq', h'⟩ u usuppx,
+  { rintros ⟨a', f', xeq', h'⟩ i u usuppx,
     rcases (mem_supp x _ u).mp @usuppx a' f' xeq'.symm with ⟨i, _, f'ieq⟩,
     rw ←f'ieq, apply h' },
   intro h',
   refine ⟨a, f, xeq.symm, _⟩, intros j y,
   apply h', rw mem_supp,
   intros a' f' xeq',
-  apply h a' f' xeq',
+  apply h _ a' f' xeq',
   apply mem_image_of_mem _ (mem_univ _)
 end
 
@@ -142,6 +142,14 @@ representing a single value all have the same range. -/
 def is_uniform : Prop := ∀ ⦃α : typevec n⦄ (a a' : q.P.A)
     (f : q.P.B a ⟹ α) (f' : q.P.B a' ⟹ α),
   abs ⟨a, f⟩ = abs ⟨a', f'⟩ → ∀ i, f i '' univ = f' i '' univ
+
+/-- does `abs` preserve `liftp`? -/
+def liftp_preservation : Prop :=
+∀ ⦃α : typevec n⦄ (p : Π ⦃i⦄, α i → Prop) (x : q.P.obj α), liftp p (abs x) ↔ liftp p x
+
+/-- does `abs` preserve `supp`? -/
+def supp_preservation : Prop :=
+∀ ⦃α⦄ (x : q.P.obj α), supp (abs x) = supp x
 
 variable [q]
 
@@ -154,25 +162,53 @@ begin
   rw [←h _ _ _ _ e.symm], apply h'
 end
 
-theorem liftp_iff_of_is_uniform (h : q.is_uniform) {α : Type u} (x : F α) (p : α → Prop) :
-  liftp p x ↔ ∀ u ∈ supp x, p u :=
+theorem liftp_iff_of_is_uniform (h : q.is_uniform) {α : typevec n} (x : F α) (p : Π i, α i → Prop) :
+  liftp p x ↔ ∀ i (u ∈ supp x i), p i u :=
 begin
   rw [liftp_iff, ←abs_repr x],
   cases repr x with a f,  split,
   { rintros ⟨a', f', abseq, hf⟩ u,
     rw [supp_eq_of_is_uniform h, h _ _ _ _ abseq],
-    rintros ⟨i, _, hi⟩, rw ←hi, apply hf },
+    rintros b ⟨i, _, hi⟩, rw ←hi, apply hf },
   intro h',
-  refine ⟨a, f, rfl, λ i, h' _ _⟩,
+  refine ⟨a, f, rfl, λ _ i, h' _ _ _⟩,
   rw supp_eq_of_is_uniform h,
   exact ⟨i, mem_univ i, rfl⟩
 end
 
-theorem supp_map (h : q.is_uniform) {α β : Type u} (g : α → β) (x : F α) :
-  supp (g <$> x) = g '' supp x :=
+theorem supp_map (h : q.is_uniform) {α β : typevec n} (g : α ⟹ β) (x : F α) (i) :
+  supp (g <$$> x) i = g i '' supp x i :=
 begin
-  rw ←abs_repr x, cases repr x with a f, rw [←abs_map, pfunctor.map_eq],
-  rw [supp_eq_of_is_uniform h, supp_eq_of_is_uniform h, image_comp]
+  rw ←abs_repr x, cases repr x with a f, rw [←abs_map, mvpfunctor.map_eq],
+  rw [supp_eq_of_is_uniform h, supp_eq_of_is_uniform h, ← image_comp],
+  refl,
 end
+
+theorem supp_preservation_iff_uniform :
+  q.supp_preservation ↔ q.is_uniform :=
+begin
+  split,
+  { intros h α a a' f f' h' i,
+    rw [← mvpfunctor.supp_eq,← mvpfunctor.supp_eq,← h,h',h] },
+  { rintros h α ⟨a,f⟩, ext, rwa [supp_eq_of_is_uniform,mvpfunctor.supp_eq], }
+end
+
+theorem supp_preservation_iff_liftp_preservation :
+  q.supp_preservation ↔ q.liftp_preservation :=
+begin
+  split; intro h,
+  { rintros α p ⟨a,f⟩,
+    have h' := h, rw supp_preservation_iff_uniform at h',
+    dsimp [supp_preservation,supp] at h,
+    simp [liftp_iff_of_is_uniform,supp_eq_of_is_uniform,mvpfunctor.liftp_iff',h'],
+    split; intros; subst_vars; solve_by_elim },
+  { rintros α ⟨a,f⟩,
+    simp [liftp_preservation] at h,
+    ext, simp [supp,h] }
+end
+
+theorem liftp_preservation_iff_uniform :
+  q.liftp_preservation ↔ q.is_uniform :=
+by rw [← supp_preservation_iff_liftp_preservation, supp_preservation_iff_uniform]
 
 end mvqpf

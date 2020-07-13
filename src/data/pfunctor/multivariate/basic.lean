@@ -136,6 +136,14 @@ begin
   rw [xeq], reflexivity
 end
 
+theorem liftp_iff' {α : typevec n} (p : Π ⦃i⦄ , α i → Prop) (a : P.A) (f : P.B a ⟹ α) :
+  @liftp.{u} _ P.obj _ α p ⟨a,f⟩ ↔ ∀ i x, p (f i x) :=
+begin
+  simp only [liftp_iff, sigma.mk.inj_iff]; split; intro,
+  { casesm* [Exists _, _ ∧ _], subst_vars, assumption },
+  repeat { constructor <|> assumption }
+end
+
 theorem liftr_iff {α : typevec n} (r : Π ⦃i⦄, α i → α i → Prop) (x y : P.obj α) :
   liftr r x y ↔ ∃ a f₀ f₁, x = ⟨a, f₀⟩ ∧ y = ⟨a, f₁⟩ ∧ ∀ i j, r (f₀ i j) (f₁ i j) :=
 begin
@@ -150,6 +158,18 @@ begin
   dsimp, split,
   { rw [xeq], refl },
   rw [yeq], refl
+end
+
+open set mvfunctor
+
+theorem supp_eq {α : typevec n} (a : P.A) (f : P.B a ⟹ α) (i) :
+  @supp.{u} _ P.obj _ α  (⟨a,f⟩ : P.obj α) i = f i '' univ :=
+begin
+  ext, simp [supp], split; intro h,
+  { apply @h (λ i x, ∃ (y : P.B a i), f i y = x),
+    rw liftp_iff', intros, refine ⟨_,rfl⟩ },
+  { simp [liftp_iff'], cases h, subst x,
+    tauto }
 end
 
 end mvpfunctor

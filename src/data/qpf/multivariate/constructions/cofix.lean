@@ -7,7 +7,7 @@ Author: Jeremy Avigad, Simon Hudon
 import control.functor.multivariate
 import data.pfunctor.multivariate.basic
 import data.pfunctor.multivariate.M
-import data.qpf.multivariate.constructions.basic
+import data.qpf.multivariate.basic
 
 /-!
 The final co-algebra of a multivariate qpf is again a qpf.

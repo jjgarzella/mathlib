@@ -5,8 +5,7 @@ Author: Jeremy Avigad, Simon Hudon
 -/
 
 import data.pfunctor.multivariate.basic
-import data.qpf.multivariate.constructions.basic
-
+import data.qpf.multivariate.basic
 
 /-!
 # The composition of QPFs is itself a QPF

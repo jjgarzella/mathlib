@@ -52,6 +52,38 @@ theorem comp_map {α β γ : typevec n} (f : α ⟹ β) (g : β ⟹ γ) :
   ∀ x : P.obj α, (g ⊚ f) <$$> x = g <$$> (f <$$> x)
 | ⟨a, h⟩ := rfl
 
+/-- Constant functor where the input object does not affect the output -/
+def const (n : ℕ) (A : Type u) : mvpfunctor n :=
+{ A := A, B := λ a i, pempty }
+
+section const
+variables (n) {A : Type u}  {α β : typevec.{u} n}
+
+/-- Constructor for the constant functor -/
+def const.mk (x : A) {α} : (const n A).obj α :=
+⟨ x, λ i a, pempty.elim a ⟩
+
+variables {n A}
+
+/-- Destructor for the constant functor -/
+def const.get (x : (const n A).obj α) : A :=
+x.1
+
+@[simp]
+lemma const.get_map (f : α ⟹ β) (x : (const n A).obj α) :
+  const.get (f <$$> x) = const.get x :=
+by cases x; refl
+
+@[simp]
+lemma const.get_mk (x : A) : const.get (const.mk n x : (const n A).obj α) = x :=
+by refl
+
+@[simp]
+lemma const.mk_get (x : (const n A).obj α) : const.mk n (const.get x) = x :=
+by cases x; dsimp [const.get,const.mk]; congr; ext _ ⟨ ⟩
+
+end const
+
 /-- Functor composition on polynomial functors -/
 def comp (P : mvpfunctor.{u} n) (Q : fin2 n → mvpfunctor.{u} m) : mvpfunctor m :=
 { A := Σ a₂ : P.1, Π i, P.2 a₂ i → (Q i).1,

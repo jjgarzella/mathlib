@@ -1,15 +1,30 @@
 /-
 Copyright (c) 2018 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author: Jeremy Avigad
-
-The initial algebra of a multivariate qpf is again a qpf.
+Author: Jeremy Avigad, Simon Hudon
 -/
 
 import control.functor.multivariate
 import data.pfunctor.multivariate.basic
 import data.pfunctor.multivariate.M
 import data.qpf.multivariate.constructions.basic
+
+/-!
+The final co-algebra of a multivariate qpf is again a qpf.
+
+Similarly to the initial algebra of a multivariate qpf,
+we define the corresponding polynomial functor by selecting:
+ * A := a tree-like structure without information in the nodes
+ * B := given the tree-like structure `t`, `B t` is a valid path
+   from the root of `t` to any given node.
+
+As a result `P.obj α` is made of a dataless tree and a function from
+its valid paths to values of `α`
+
+The difference with the polynomial functor of an initial algebra is
+that `A` is a possibly infinite tree
+
+-/
 
 universe u
 

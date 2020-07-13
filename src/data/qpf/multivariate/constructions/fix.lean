@@ -11,6 +11,14 @@ universes u v
 
 The initial algebra of a multivariate qpf is again a qpf.
 
+We define the corresponding polynomial functor by selecting:
+ * A := a tree-like structure without information in the nodes
+ * B := given the tree-like structure `t`, `B t` is a valid path
+   from the root of `t` to any given node.
+
+As a result `P.obj α` is made of a dataless tree and a function from
+its valid paths to values of `α`
+
 -/
 
 namespace mvqpf

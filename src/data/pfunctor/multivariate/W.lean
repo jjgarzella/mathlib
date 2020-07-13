@@ -5,7 +5,7 @@ Author: Jeremy Avigad
 
 The W construction as a multivariate polynomial functor.
 -/
-import data.qpf.multivariate.pfunctor.basic
+import data.pfunctor.multivariate.basic
 universes u v
 
 namespace mvpfunctor

@@ -53,7 +53,7 @@ variables (R : ∀ ⦃α⦄, F α → F α → Prop)
 def quot1 (α : typevec n) :=
 quot (@R α)
 
-instance {α : typevec n} [inhabited $ F α] : inhabited (quot1 R α) :=
+instance quot1.inhabited {α : typevec n} [inhabited $ F α] : inhabited (quot1 R α) :=
 ⟨ quot.mk _ (default _) ⟩
 
 variables [mvfunctor F] [q : mvqpf F]

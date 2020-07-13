@@ -7,10 +7,9 @@ The initial algebra of a multivariate qpf is again a qpf.
 -/
 
 import control.functor.multivariate
-import data.qpf.multivariate.pfunctor.basic
-import data.qpf.multivariate.pfunctor.M
+import data.pfunctor.multivariate.basic
+import data.pfunctor.multivariate.M
 import data.qpf.multivariate.constructions.basic
-import tactic.reassoc_axiom
 
 universe u
 

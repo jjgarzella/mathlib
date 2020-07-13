@@ -3,7 +3,7 @@ Copyright (c) 2018 Jeremy Avigad. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
 Author: Jeremy Avigad
 -/
-import data.qpf.multivariate.pfunctor.W
+import data.pfunctor.multivariate.W
 import data.qpf.multivariate.constructions.basic
 universes u v
 

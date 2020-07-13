@@ -6,7 +6,7 @@ Author: Jeremy Avigad, Mario Carneiro
 The M construction as a multivariate polynomial functor.
 -/
 import data.pfunctor.univariate
-import data.qpf.multivariate.pfunctor.basic
+import data.pfunctor.multivariate.basic
 universe u
 
 namespace mvpfunctor

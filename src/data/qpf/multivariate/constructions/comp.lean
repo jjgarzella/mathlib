@@ -1,5 +1,5 @@
 
-import data.qpf.multivariate.pfunctor.basic
+import data.pfunctor.multivariate.basic
 import data.qpf.multivariate.constructions.basic
 
 universes u

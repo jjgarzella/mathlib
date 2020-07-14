@@ -218,7 +218,7 @@ protected theorem eq : mk I x = mk I y ↔ x - y ∈ I := submodule.quotient.eq 
 @[simp] theorem mk_eq_mk (x : α) : (submodule.quotient.mk x : quotient I) = mk I x := rfl
 
 lemma eq_zero_iff_mem {I : ideal α} : mk I a = 0 ↔ a ∈ I :=
-by conv {to_rhs, rw ← sub_zero a }; exact quotient.eq'
+submodule.quotient.mk_eq_zero I
 
 theorem zero_eq_one_iff {I : ideal α} : (0 : I.quotient) = 1 ↔ I = ⊤ :=
 eq_comm.trans $ eq_zero_iff_mem.trans (eq_top_iff_one _).symm
@@ -246,6 +246,10 @@ begin
   rw [mul_comm] at hb,
   exact ⟨mk _ b, quot.sound hb⟩
 end
+
+protected lemma is_unit {I : ideal α} [hI : I.is_maximal] :
+  ∀ {a : I.quotient}, a ≠ 0 → is_unit a :=
+λ a ha, is_unit_iff_exists_inv.mpr (exists_inv ha)
 
 /-- quotient by maximal ideal is a field. def rather than instance, since users will have
 computable inverses in some applications -/
@@ -275,6 +279,19 @@ def lift (S : ideal α) (f : α →+* β) (H : ∀ (a : α), a ∈ S → f a = 0
 
 end quotient
 
+lemma is_maximal_iff_is_unit_quotient {I : ideal α} (ne_top : I ≠ ⊤) :
+  I.is_maximal ↔ ∀ {a : I.quotient}, a ≠ 0 → is_unit a :=
+⟨ λ hI x x_ne_zero, @quotient.is_unit _ _ I hI x x_ne_zero,
+  begin
+    intro hI,
+    use ne_top,
+    intros J hJ,
+    apply J.eq_top_iff_one.mpr,
+    obtain ⟨x, mem_J, not_mem_I⟩ := submodule.exists_of_lt hJ,
+    obtain ⟨⟨y⟩, hy⟩ := is_unit_iff_exists_inv'.mp (hI (mt quotient.eq_zero_iff_mem.mp not_mem_I)),
+    simpa using J.add_mem (le_of_lt hJ (quotient.eq.mp hy.symm)) (J.smul_mem y mem_J),
+  end ⟩
+
 section lattice
 variables {R : Type u} [comm_ring R]
 
@@ -297,6 +314,22 @@ begin
   by_cases H : r = 0, {simpa},
   simpa [H, h1] using submodule.smul_mem I r⁻¹ hr,
 end
+
+lemma is_unit_of_ideals_trivial {R : Type u} [comm_ring R] {x : R}
+  (h : ∀ (I : ideal R), I = ⊥ ∨ I = ⊤) (hx : x ≠ 0) : is_unit x :=
+span_singleton_eq_top.mp ((h _).resolve_left (mt span_singleton_eq_bot.mp hx))
+
+/-- If all ideals in a nontrivial commutative ring are trivial, it's a field. -/
+noncomputable def field_of_ideals_trivial {R : Type u} [hcr : comm_ring R] [hnt : nontrivial R]
+  (h : ∀ (I : ideal R), I = ⊥ ∨ I = ⊤) : field R :=
+{ inv := λ x, if hx : x = 0 then 0 else (is_unit_of_ideals_trivial h hx).unit.inv,
+  inv_zero := dif_pos rfl,
+  mul_inv_cancel := λ x hx,
+    by { convert (is_unit_of_ideals_trivial h hx).unit.mul_inv,
+         { erw is_unit.unit_spec },
+         apply dif_neg hx },
+  ..hcr,
+  ..hnt }
 
 lemma eq_bot_of_prime {K : Type u} [field K] (I : ideal K) [h : I.is_prime] :
   I = ⊥ :=

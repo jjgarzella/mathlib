@@ -203,6 +203,47 @@ begin
   { exact IH _ _ (h'' _) }
 end
 
+
+theorem M.bisim₀ {α : typevec n} (R : P.M α → P.M α → Prop)
+  (h₀ : equivalence R)
+  (h : ∀ x y, R x y →
+    (id ::: quot.mk R) <$$> M.dest _ x = (id ::: quot.mk R) <$$> M.dest _ y)
+  (x y) (r : R x y) : x = y :=
+begin
+  apply M.bisim P R _ _ _ r, clear r x y,
+  introv Hr, specialize h _ _ Hr, clear Hr,
+  rcases M.dest P x with ⟨ax,fx⟩, rcases M.dest P y with ⟨ay,fy⟩,
+  intro h, rw [map_eq,map_eq] at h, injection h with h₀ h₁, subst ay,
+  simp at h₁, clear h,
+  have Hdrop : drop_fun fx = drop_fun fy,
+  { replace h₁ := congr_arg drop_fun h₁,
+    simpa using h₁, },
+  existsi [ax,drop_fun fx,last_fun fx,last_fun fy],
+  rw [split_drop_fun_last_fun,Hdrop,split_drop_fun_last_fun],
+  simp, intro i,
+  replace h₁ := congr_fun (congr_fun h₁ fin2.fz) i,
+  simp [(⊚),append_fun,split_fun] at h₁,
+  replace h₁ := quot.exact _  h₁,
+  rw relation.eqv_gen_iff_of_equivalence at h₁,
+  exact h₁, exact h₀
+end
+
+theorem M.bisim' {α : typevec n} (R : P.M α → P.M α → Prop)
+  (h : ∀ x y, R x y →
+    (id ::: quot.mk R) <$$> M.dest _ x = (id ::: quot.mk R) <$$> M.dest _ y)
+  (x y) (r : R x y) : x = y :=
+begin
+  have := M.bisim₀ P (eqv_gen R) _ _,
+  { solve_by_elim [eqv_gen.rel] },
+  { apply eqv_gen.is_equivalence },
+  { clear r x y, introv Hr,
+    have : ∀ x y, R x y → eqv_gen R x y := @eqv_gen.rel _ R,
+    induction Hr,
+    { rw ← quot.factor_mk_eq R (eqv_gen R) this,
+      rwa [append_fun_comp_id,← mvfunctor.map_map,← mvfunctor.map_map,h] },
+    all_goals
+    { cc } }
+end
 theorem M.dest_map {α β : typevec n} (g : α ⟹ β) (x : P.M α) :
   M.dest P (g <$$> x) = append_fun g (λ x, g <$$> x) <$$> M.dest P x :=
 begin
@@ -210,6 +251,15 @@ begin
   rw map_eq,
   conv { to_rhs, rw [M.dest, M.dest', map_eq, append_fun_comp_split_fun] },
   reflexivity
+end
+
+theorem M.map_dest {α β : typevec n} (g : α ::: P.M α ⟹ β ::: P.M β) (x : P.M α)
+  (h : ∀ x : P.M α, last_fun g x = (drop_fun g <$$> x : P.M β) ):
+  g <$$> M.dest P x = M.dest P (drop_fun g <$$> x) :=
+begin
+  rw M.dest_map, congr,
+  apply eq_of_drop_last_eq; simp,
+  ext1, apply h
 end
 
 end mvpfunctor

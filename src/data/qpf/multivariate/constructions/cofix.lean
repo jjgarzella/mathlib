@@ -109,6 +109,12 @@ quot.lift
         ←append_fun_comp_id] }
   end
 
+def cofix.abs {α} : q.P.M α → cofix F α :=
+quot.mk _
+
+def cofix.repr {α} : cofix F α → q.P.M α :=
+M.corec _ $ repr ∘ cofix.dest
+
 /-- Corecursor for `cofix F` -/
 def cofix.corec'₁ {α : typevec n} {β : Type u}
   (g : Π {X}, (β → X) → F (α.append1 X)) (x : β) : cofix F α :=
@@ -215,7 +221,8 @@ theorem cofix.bisim₂ {α : typevec n}
   ∀ x y, r x y → x = y :=
 cofix.bisim _ $ by intros; rw ← liftr_last_rel_iff; apply h; assumption
 
-theorem cofix.bisim' {α : typevec n} {β : Type*} (Q : β → Prop) (u v : β → cofix F α)
+theorem cofix.bisim' {α : typevec n} {β : Type*} (Q : β → Prop)
+  (u v : β → cofix F α)
     (h : ∀ x, Q x → ∃ a f' f₀ f₁,
       cofix.dest (u x) = abs ⟨a, q.P.append_contents f' f₀⟩ ∧
       cofix.dest (v x) = abs ⟨a, q.P.append_contents f' f₁⟩ ∧
@@ -309,6 +316,33 @@ end
 
 end
 
+lemma cofix.abs_repr {α} (x : cofix F α) :
+  quot.mk _ (cofix.repr x) = x :=
+begin
+  let R := λ x y : cofix F α,
+    cofix.abs (cofix.repr y) = x,
+  refine cofix.bisim₂ R _ _ _ rfl,
+  clear x, rintros x y h, dsimp [R] at h, subst h,
+  dsimp [cofix.dest,cofix.abs],
+  induction y using quot.ind,
+  simp [cofix.repr,M.dest_corec,abs_map,abs_repr],
+  conv { congr, skip, rw cofix.dest },
+  dsimp, rw [mvfunctor.map_map,mvfunctor.map_map,← append_fun_comp_id,← append_fun_comp_id],
+  let f : α ::: (P F).M α ⟹ subtype_ (α.rel_last' R) :=
+    split_fun diag_sub (λ x, ⟨(cofix.abs (cofix.abs x).repr, cofix.abs x),_⟩),
+  refine liftr_map _ _ _ _ f _,
+  { simp [← append_prod_append_fun],
+    apply eq_of_drop_last_eq,
+    { dsimp, simp,
+      erw subtype_val_diag_sub,
+    },
+    ext1, simp [cofix.abs],
+    dsimp [drop_fun_rel_last,last_fun,prod.diag],
+    split; refl, },
+  dsimp [rel_last',split_fun,function.uncurry,R],
+  refl,
+end
+
 section tactic
 
 setup_tactic_parser
@@ -376,11 +410,11 @@ theorem cofix.dest_corec₁ {α : typevec n} {β : Type u}
   cofix.dest (cofix.corec₁ @g x) = g id (cofix.corec₁ @g) x :=
 by rw [cofix.corec₁,cofix.dest_corec',← h]; refl
 
-noncomputable instance mvqpf_cofix : mvqpf (cofix F) :=
+instance mvqpf_cofix : mvqpf (cofix F) :=
 { P         := q.P.Mp,
   abs       := λ α, quot.mk Mcongr,
-  repr      := λ α, quot.out,
-  abs_repr  := λ α, quot.out_eq,
+  repr      := λ α, cofix.repr,
+  abs_repr  := λ α, cofix.abs_repr,
   abs_map   := λ α β g x, rfl
 }
 

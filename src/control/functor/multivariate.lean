@@ -810,7 +810,7 @@ by { ext i : 2, induction i; simp [drop_fun,*]; refl }
 @[simp]
 lemma drop_fun_rel_last {α : typevec n} {β}
   (R : β → β → Prop) :
-  drop_fun (rel_last' α R) = repeat_eq _ := rfl
+  drop_fun (rel_last' α R) = repeat_eq α := rfl
 
 attribute [simp] drop_append1'
 
@@ -844,7 +844,7 @@ by { ext i : 2, induction i; simp only [typevec.prod.map,*,drop_fun_id],
 
 @[simp]
 lemma subtype_val_diag_sub {α : ptypevec n} :
-  subtype_val (repeat_eq α) ⊚ diag_sub = id ⊚ prod.diag :=
+  subtype_val (repeat_eq α) ⊚ diag_sub = prod.diag :=
 by { clear_except, ext i, induction i; [refl, apply i_ih], }
 
 @[simp]

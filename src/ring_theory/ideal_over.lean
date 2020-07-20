@@ -4,9 +4,7 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Author: Anne Baanen
 -/
 
-import field_theory.minimal_polynomial
 import ring_theory.algebraic
-import group_theory.congruence
 
 /-!
 # Ideals over/under ideals
@@ -39,16 +37,6 @@ lemma coeff_zero_mem_comap_of_root_mem {r : S} (hr : r ∈ I) {p : polynomial R}
   (hp : p.eval₂ f r = 0) : p.coeff 0 ∈ I.comap f :=
 coeff_zero_mem_comap_of_root_mem_of_eval_mem hr (hp.symm ▸ I.zero_mem)
 
-lemma comap_eq_top_iff {I : ideal S} : I.comap f = ⊤ ↔ I = ⊤ :=
-⟨ λ h, I.eq_top_iff_one.mpr (f.map_one ▸ mem_comap.mp ((I.comap f).eq_top_iff_one.mp h)),
-  λ h, by rw [h, comap_top] ⟩
-
-lemma hom_eq_zero_of_monic_of_map_eq_zero {p : polynomial R} (hp : p.monic) (hfp : p.map f = 0) :
-  ∀ x, f x = 0 :=
-λ x, calc f x = f x * f p.leading_coeff : by simp [hp]
-     ... = f x * (p.map f).coeff p.nat_degree : by rw [polynomial.leading_coeff, ←coeff_map]
-     ... = 0 : by simp [hfp]
-
 lemma exists_coeff_ne_zero_mem_comap_of_non_zero_divisor_root_mem {r : S}
   (r_non_zero_divisor : ∀ {x}, x * r = 0 → x = 0) (hr : r ∈ I)
   {p : polynomial R} : ∀ (p_ne_zero : p ≠ 0) (hp : p.eval₂ f r = 0),
@@ -75,29 +63,6 @@ lemma exists_coeff_ne_zero_mem_comap_of_root_mem {r : S} (r_ne_zero : r ≠ 0) (
   ∃ i, p.coeff i ≠ 0 ∧ p.coeff i ∈ I.comap f :=
 exists_coeff_ne_zero_mem_comap_of_non_zero_divisor_root_mem
   (λ _ h, or.resolve_right (mul_eq_zero.mp h) r_ne_zero) hr
-
-@[simp] lemma lift_comp_mk (I : ideal R) (H : ∀ (a : R), a ∈ I → f a = 0) :
-  (quotient.lift I f H).comp (quotient.mk I) = f :=
-by { ext, exact @quotient.lift_mk _ _ _ _ _ I f H }
-
-@[simp] lemma quotient.lift_comp {T : Type} [comm_ring T] (I : ideal R) (f : R →+* S) (g : S →+* T)
-  (hf : ∀ (a : R), a ∈ I → f a = 0) (hgf : ∀ (a : R), a ∈ I → g (f a) = 0) :
-  quotient.lift I (g.comp f) hgf = g.comp (quotient.lift I f hf) :=
-ring_hom.ext (λ xbar, quot.induction_on xbar (λ x, by simp))
-
-lemma quotient.mk_surjective (I : ideal R) : function.surjective (quotient.mk I) :=
-begin
-  rintro ⟨x⟩,
-  exact ⟨x, rfl⟩
-end
-
-lemma mem_of_mem_quotient (hIJ : I ≤ J) {x : S}
-  (mem : quotient.mk I x ∈ J.map (quotient.mk I)) : x ∈ J :=
-begin
-  obtain ⟨x, x_mem, x_eq⟩ := (set.mem_image _ _ _).mp
-    (mem_image_of_mem_map_of_surjective (quotient.mk I) (quotient.mk_surjective I) mem),
-  simpa using J.add_mem (hIJ (quotient.eq.mp x_eq.symm)) x_mem,
-end
 
 lemma exists_coeff_mem_comap_sdiff_comap_of_root_mem_sdiff
   [is_prime I] (hIJ : I ≤ J) {r : S} (hr : r ∈ (J : set S) \ I)
@@ -159,11 +124,11 @@ begin
   { intro h,
     refine mem.2 (mem_of_one_mem _ _),
     rw [←(algebra_map R S).map_one, ←mem_comap, ←quotient.eq_zero_iff_mem],
-    apply hom_eq_zero_of_monic_of_map_eq_zero p_monic h 1 },
+    apply (map_monic_eq_zero_iff p_monic).mp h 1 },
   convert I.zero_mem
 end
 
-lemma is_maximal_of_is_integral_of_is_maximal_comap [nontrivial R]
+lemma is_maximal_of_is_integral_of_is_maximal_comap
   (hRS : ∀ (x : S), is_integral R x) (I : ideal S) [I.is_prime]
   (hI : is_maximal (I.comap (algebra_map R S))) : is_maximal I :=
 ⟨ mt comap_eq_top_iff.mpr hI.1,
@@ -185,7 +150,7 @@ lemma integral_closure.comap_lt_comap {I J : ideal (integral_closure R S)} [I.is
 let ⟨I_le_J, x, hxJ, hxI⟩ := lt_iff_le_and_exists.mp I_lt_J in
 comap_lt_comap_of_integral_mem_sdiff I_le_J ⟨hxJ, hxI⟩ (integral_closure.is_integral x)
 
-lemma integral_closure.is_maximal_of_is_maximal_comap [nontrivial R]
+lemma integral_closure.is_maximal_of_is_maximal_comap
   (I : ideal (integral_closure R S)) [I.is_prime]
   (hI : is_maximal (I.comap (algebra_map R (integral_closure R S)))) : is_maximal I :=
 is_maximal_of_is_integral_of_is_maximal_comap (λ x, integral_closure.is_integral x) I hI

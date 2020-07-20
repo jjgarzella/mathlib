@@ -277,6 +277,21 @@ def lift (S : ideal α) (f : α →+* β) (H : ∀ (a : α), a ∈ S → f a = 0
 @[simp] lemma lift_mk (S : ideal α) (f : α →+* β) (H : ∀ (a : α), a ∈ S → f a = 0) :
   lift S f H (mk S a) = f a := rfl
 
+@[simp] lemma lift_comp_mk (f : α →+* β) (H : ∀ a, a ∈ I → f a = 0) :
+  (quotient.lift I f H).comp (quotient.mk I) = f :=
+by { ext, exact @quotient.lift_mk _ _ _ _ _ I f H }
+
+lemma lift_comp {T : Type} [comm_ring T] (f : α →+* β) (g : β →+* T)
+  {hgf : ∀ a, a ∈ I → g (f a) = 0} (hf : ∀ a, a ∈ I → f a = 0) :
+  quotient.lift I (g.comp f) hgf = g.comp (quotient.lift I f hf) :=
+ring_hom.ext (λ xbar, quot.induction_on xbar (λ x, by simp))
+
+lemma mk_surjective : function.surjective (quotient.mk I) :=
+begin
+  rintro ⟨x⟩,
+  exact ⟨x, rfl⟩
+end
+
 end quotient
 
 lemma is_maximal_iff_is_unit_quotient {I : ideal α} (ne_top : I ≠ ⊤) :

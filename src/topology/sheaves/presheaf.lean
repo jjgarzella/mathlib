@@ -71,6 +71,14 @@ end
 
 end pushforward
 
+section
+variables {X : Top.{v}} {ℱ : X.presheaf C}
+
+def restriction {U V : (opens X)} (incl : V ⟶ U) :
+  ((ℱ.obj (op U)) ⟶ ℱ.obj (op V)) := ℱ.map incl.op
+
+end
+
 end presheaf
 
 end Top

@@ -50,6 +50,10 @@ instance psum.inhabited_right {α β} [inhabited β] : inhabited (psum α β) :=
   {α} [subsingleton α] : decidable_eq α
 | a b := is_true (subsingleton.elim a b)
 
+@[simp] lemma eq_iff_true_of_subsingleton [subsingleton α] (x y : α) :
+  x = y ↔ true :=
+by cc
+
 /-- Add an instance to "undo" coercion transitivity into a chain of coercions, because
    most simp lemmas are stated with respect to simple coercions and will not match when
    part of a chain. -/
@@ -497,6 +501,9 @@ end equality
 section quantifiers
 variables {α : Sort*} {β : Sort*} {p q : α → Prop} {b : Prop}
 
+lemma forall_imp (h : ∀ a, p a → q a) : (∀ a, p a) → ∀ a, q a :=
+λ h' a, h a (h' a)
+
 lemma Exists.imp (h : ∀ a, (p a → q a)) (p : ∃ a, p a) : ∃ a, q a := exists_imp_exists h p
 
 lemma exists_imp_exists' {p : α → Prop} {q : β → Prop} (f : α → β) (hpq : ∀ a, p a → q (f a))
@@ -511,6 +518,17 @@ theorem exists_swap {p : α → β → Prop} : (∃ x y, p x y) ↔ ∃ y x, p x
 
 @[simp] theorem exists_imp_distrib : ((∃ x, p x) → b) ↔ ∀ x, p x → b :=
 ⟨λ h x hpx, h ⟨x, hpx⟩, λ h ⟨x, hpx⟩, h x hpx⟩
+
+/--
+Extract an element from a existential statement, using `classical.some`.
+-/
+-- This enables projection notation.
+@[reducible] noncomputable def Exists.some {p : α → Prop} (P : ∃ a, p a) : α := classical.some P
+
+/--
+Show that an element extracted from `P : ∃ a, p a` using `P.some` satisfies `p`.
+-/
+lemma Exists.some_spec {p : α → Prop} (P : ∃ a, p a) : p (P.some) := classical.some_spec P
 
 --theorem forall_not_of_not_exists (h : ¬ ∃ x, p x) : ∀ x, ¬ p x :=
 --forall_imp_of_exists_imp h
@@ -951,6 +969,14 @@ iff.intro (assume ⟨f⟩ a, ⟨f a⟩) (assume f, ⟨assume a, classical.choice
 noncomputable def classical.inhabited_of_nonempty' {α : Sort u} [h : nonempty α] : inhabited α :=
 ⟨classical.choice h⟩
 
+/-- Using `classical.choice`, extracts a term from a `nonempty` type. -/
+@[reducible] protected noncomputable def nonempty.some {α : Sort u} (h : nonempty α) : α :=
+classical.choice h
+
+/-- Using `classical.choice`, extracts a term from a `nonempty` type. -/
+@[reducible] protected noncomputable def classical.arbitrary (α : Sort u) [h : nonempty α] : α :=
+classical.choice h
+
 /-- Given `f : α → β`, if `α` is nonempty then `β` is also nonempty.
   `nonempty` cannot be a `functor`, because `functor` is restricted to `Type`. -/
 lemma nonempty.map {α : Sort u} {β : Sort v} (f : α → β) : nonempty α → nonempty β
@@ -993,3 +1019,14 @@ lemma ite_apply {α : Type*} {β : α → Type*} (P : Prop) [decidable P]
 dite_apply P (λ _, f) (λ _, g) x
 
 end ite
+
+/--
+A convenience method for extracting the property satisfied by a term which is merely equal to
+`classical.some _`.
+-/
+lemma classical.spec_of_eq_some
+  {α : Type*} {p : α → Prop} {a : α} {w : ∃ x, p x} (h : a = classical.some w) : p a :=
+begin
+  subst h,
+  apply classical.some_spec,
+end
